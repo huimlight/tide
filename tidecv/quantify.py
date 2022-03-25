@@ -11,6 +11,8 @@ import numpy as np
 from typing import Union
 import os, math
 
+import pandas as pd
+
 class TIDEExample:
 	""" Computes all the data needed to evaluate a set of predictions and gt for a single image. """
 	def __init__(self, preds:list, gt:list, pos_thresh:float, mode:str, max_dets:int, run_errors:bool=True):
@@ -133,6 +135,13 @@ class TIDERun:
 	# Temporary variables stored in ground truth that we need to clear after a run
 	_temp_vars = ['best_score', 'best_id', 'used', 'matched_with', '_idx', 'usable']
 
+	_score = []
+	_iou = []
+	_gt_label_id = []
+	_pre_label_id = []
+	_image_id = []
+	_bbox_type = [] # tp / cls_error / loc_error / cls_loc_error / Duplicate / Bkgd / Missed
+
 	def __init__(self, gt:Data, preds:Data, pos_thresh:float, bg_thresh:float, mode:str, max_dets:int, run_errors:bool=True):
 		self.gt     = gt
 		self.preds  = preds
@@ -151,8 +160,17 @@ class TIDERun:
 		self.max_dets   = max_dets
 		self.run_errors = run_errors
 
-		self._run()
+		self.data_frame = pd.DataFrame()
 
+		self._run()
+		self._save()
+
+	def _save(self):
+		res = {'score': self._score, 'iou': self._iou, 'gt_label_id': self._gt_label_id,
+			   'pre_label_id': self._pre_label_id, 'image_id': self._image_id, 'bbox_type': self._bbox_type}
+		res_df = pd.DataFrame(res)
+		self.data_frame = res_df
+		res_df.to_csv('./res.csv', index=None)
 
 	def _run(self):
 		""" And awaaay we go """
@@ -210,6 +228,13 @@ class TIDERun:
 					if self.run_errors:
 						self._add_error(MissedError(truth))
 						self.false_negatives[truth['class']].append(truth)
+
+						self._score.append(truth['score']-1)
+						self._iou.append(0)
+						self._gt_label_id.append(truth['class'])
+						self._pre_label_id.append(0)
+						self._image_id.append(truth['image'])
+						self._bbox_type.append('Missed')
 			return
 
 		ex = TIDEExample(preds, gt, self.pos_thresh, self.mode, self.max_dets, self.run_errors)
@@ -222,6 +247,14 @@ class TIDERun:
 			
 			if pred['used'] is not None:
 				self.ap_data.push(pred['class'], pred['_id'], pred['score'], pred['used'], pred['info'])
+
+			if pred['info']['used']:
+				self._score.append(pred['score'])
+				self._iou.append(pred['iou'])
+				self._gt_label_id.append(pred['class'])
+				self._pre_label_id.append(pred['class'])
+				self._image_id.append(pred['image'])
+				self._bbox_type.append('TP')
 			
 			# ----- ERROR DETECTION ------ #
 			# This prediction is a negative (or ignored), let's find out why
@@ -230,6 +263,13 @@ class TIDERun:
 				if len(ex.gt) == 0: # Note this is ex.gt because it doesn't include ignore annotations
 					# There is no ground truth for this image, so just mark everything as BackgroundError
 					self._add_error(BackgroundError(pred))
+
+					self._score.append(pred['score'])
+					self._iou.append(pred['iou'])
+					self._gt_label_id.append(0)
+					self._pre_label_id.append(pred['class'])
+					self._image_id.append(pred['image'])
+					self._bbox_type.append('Bkgd')
 					continue
 
 				# Test for BoxError
@@ -237,6 +277,13 @@ class TIDERun:
 				if self.bg_thresh <= ex.gt_cls_iou[pred_idx, idx] <= self.pos_thresh:
 					# This detection would have been positive if it had higher IoU with this GT
 					self._add_error(BoxError(pred, ex.gt[idx], ex))
+
+					self._score.append(pred['score'])
+					self._iou.append(pred['iou'])
+					self._gt_label_id.append(pred['class'])
+					self._pre_label_id.append(pred['class'])
+					self._image_id.append(pred['image'])
+					self._bbox_type.append('Loc_error')
 					continue
 
 				# Test for ClassError
@@ -244,6 +291,13 @@ class TIDERun:
 				if ex.gt_noncls_iou[pred_idx, idx] >= self.pos_thresh:
 					# This detection would have been a positive if it was the correct class
 					self._add_error(ClassError(pred, ex.gt[idx], ex))
+
+					self._score.append(pred['score'])
+					self._iou.append(pred['iou'])
+					self._gt_label_id.append(ex.gt[idx]['class'])
+					self._pre_label_id.append(pred['class'])
+					self._image_id.append(pred['image'])
+					self._bbox_type.append('Cls_error')
 					continue
 
 				# Test for DuplicateError
@@ -252,6 +306,13 @@ class TIDERun:
 					# The detection would have been marked positive but the GT was already in use
 					suppressor = self.preds.annotations[ex.gt[idx]['matched_with']]
 					self._add_error(DuplicateError(pred, suppressor))
+
+					self._score.append(pred['score'])
+					self._iou.append(pred['iou'])
+					self._gt_label_id.append(pred['class'])
+					self._pre_label_id.append(pred['class'])
+					self._image_id.append(pred['image'])
+					self._bbox_type.append('Duplicate')
 					continue
 					
 				# Test for BackgroundError
@@ -259,10 +320,24 @@ class TIDERun:
 				if ex.gt_iou[pred_idx, idx] <= self.bg_thresh:
 					# This should have been marked as background
 					self._add_error(BackgroundError(pred))
+
+					self._score.append(pred['score'])
+					self._iou.append(pred['iou'])
+					self._gt_label_id.append(0)
+					self._pre_label_id.append(pred['class'])
+					self._image_id.append(pred['image'])
+					self._bbox_type.append('Bkgd')
 					continue
 
 				# A base case to catch uncaught errors
 				self._add_error(OtherError(pred))
+
+				self._score.append(pred['score'])
+				self._iou.append(pred['iou'])
+				self._gt_label_id.append(ex.gt[idx]['class'])
+				self._pre_label_id.append(pred['class'])
+				self._image_id.append(pred['image'])
+				self._bbox_type.append('Both')
 		
 		for truth in gt:
 			# If the GT wasn't used in matching, meaning it's some kind of false negative
@@ -276,6 +351,13 @@ class TIDERun:
 					# Note: 'usable' is set in error.py
 					if not truth['usable']:
 						self._add_error(MissedError(truth))
+
+						self._score.append(truth['score'] - 1)
+						self._iou.append(0)
+						self._gt_label_id.append(truth['class'])
+						self._pre_label_id.append(0)
+						self._image_id.append(truth['image'])
+						self._bbox_type.append('Missed')
 				
 
 
