@@ -87,7 +87,7 @@ class TIDEExample:
 					gt_elem['used']   = True
 					pred_elem['matched_with'] = gt_elem['_id']
 					gt_elem['matched_with']   = pred_elem['_id']
-
+					pred_elem['anno_id'] = gt_elem['anno_id']
 					# Make sure this gt can't be used again
 					iou_buffer[:, gt_idx] = 0
 
@@ -141,6 +141,7 @@ class TIDERun:
 	_pre_label_id = []
 	_image_id = []
 	_bbox_type = [] # tp / cls_error / loc_error / cls_loc_error / Duplicate / Bkgd / Missed
+	_anno_id = []
 
 	def __init__(self, gt:Data, preds:Data, pos_thresh:float, bg_thresh:float, mode:str, max_dets:int, run_errors:bool=True):
 		self.gt     = gt
@@ -167,7 +168,8 @@ class TIDERun:
 
 	def _save(self):
 		res = {'score': self._score, 'iou': self._iou, 'gt_label_id': self._gt_label_id,
-			   'pre_label_id': self._pre_label_id, 'image_id': self._image_id, 'bbox_type': self._bbox_type}
+			   'pre_label_id': self._pre_label_id, 'image_id': self._image_id, 'anno_id': self._anno_id,
+			   'bbox_type': self._bbox_type}
 		res_df = pd.DataFrame(res)
 		self.data_frame = res_df
 		res_df.to_csv('./res.csv', index=None)
@@ -235,6 +237,7 @@ class TIDERun:
 						self._pre_label_id.append(0)
 						self._image_id.append(truth['image'])
 						self._bbox_type.append('Missed')
+						self._anno_id.append(truth['anno_id'])
 			return
 
 		ex = TIDEExample(preds, gt, self.pos_thresh, self.mode, self.max_dets, self.run_errors)
@@ -255,6 +258,7 @@ class TIDERun:
 				self._pre_label_id.append(pred['class'])
 				self._image_id.append(pred['image'])
 				self._bbox_type.append('TP')
+				self._anno_id.append(pred['anno_id'])
 			
 			# ----- ERROR DETECTION ------ #
 			# This prediction is a negative (or ignored), let's find out why
@@ -270,6 +274,7 @@ class TIDERun:
 					self._pre_label_id.append(pred['class'])
 					self._image_id.append(pred['image'])
 					self._bbox_type.append('Bkgd')
+					self._anno_id.append(pred['anno_id'])
 					continue
 
 				# Test for BoxError
@@ -284,6 +289,7 @@ class TIDERun:
 					self._pre_label_id.append(pred['class'])
 					self._image_id.append(pred['image'])
 					self._bbox_type.append('Loc_error')
+					self._anno_id.append(pred['anno_id'])
 					continue
 
 				# Test for ClassError
@@ -298,6 +304,7 @@ class TIDERun:
 					self._pre_label_id.append(pred['class'])
 					self._image_id.append(pred['image'])
 					self._bbox_type.append('Cls_error')
+					self._anno_id.append(pred['anno_id'])
 					continue
 
 				# Test for DuplicateError
@@ -313,6 +320,7 @@ class TIDERun:
 					self._pre_label_id.append(pred['class'])
 					self._image_id.append(pred['image'])
 					self._bbox_type.append('Duplicate')
+					self._anno_id.append(pred['anno_id'])
 					continue
 					
 				# Test for BackgroundError
@@ -327,6 +335,7 @@ class TIDERun:
 					self._pre_label_id.append(pred['class'])
 					self._image_id.append(pred['image'])
 					self._bbox_type.append('Bkgd')
+					self._anno_id.append(pred['anno_id'])
 					continue
 
 				# A base case to catch uncaught errors
@@ -338,6 +347,7 @@ class TIDERun:
 				self._pre_label_id.append(pred['class'])
 				self._image_id.append(pred['image'])
 				self._bbox_type.append('Both')
+				self._anno_id.append(pred['anno_id'])
 		
 		for truth in gt:
 			# If the GT wasn't used in matching, meaning it's some kind of false negative
@@ -358,6 +368,7 @@ class TIDERun:
 						self._pre_label_id.append(0)
 						self._image_id.append(truth['image'])
 						self._bbox_type.append('Missed')
+						self._anno_id.append(truth['anno_id'])
 				
 
 
