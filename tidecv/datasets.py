@@ -100,9 +100,10 @@ def COCO(path:str=None, name:str=None, year:int=2017, ann_set:str='val', force_d
 		_class = ann['category_id']
 		box    = ann['bbox']
 		mask   = f.toRLE(ann['segmentation'], image_lookup[image]['width'], image_lookup[image]['height'])
+		anno_id = ann['id']
 		
-		if ann['iscrowd']: data.add_ignore_region(image, _class, box, mask)
-		else:              data.add_ground_truth (image, _class, box, mask)
+		if ann['iscrowd']: data.add_ignore_region(image, anno_id, _class, box, mask)
+		else:              data.add_ground_truth(image, anno_id, _class, box, mask)
 	
 	return data
 
@@ -119,10 +120,12 @@ def COCOResult(path:str, name:str=None) -> Data:
 		image = det['image_id']
 		_cls  = det['category_id']
 		score = det['score']
+		roi_score = det['ROI_score']
 		box   = det['bbox']         if 'bbox'         in det else None
 		mask  = det['segmentation'] if 'segmentation' in det else None
+		anno_id = -1
 
-		data.add_detection(image, _cls, score, box, mask)
+		data.add_detection(image, anno_id, _cls, score, roi_score, box, mask)
 	
 	return data
 	
