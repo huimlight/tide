@@ -120,11 +120,12 @@ def COCOResult(path:str, name:str=None) -> Data:
 		image = det['image_id']
 		_cls  = det['category_id']
 		score = det['score']
+		roi_score = det['ROI_score']
 		box   = det['bbox']         if 'bbox'         in det else None
 		mask  = det['segmentation'] if 'segmentation' in det else None
 		anno_id = -1
 
-		data.add_detection(image, anno_id, _cls, score, box, mask)
+		data.add_detection(image, anno_id, _cls, score, roi_score, box, mask)
 	
 	return data
 	

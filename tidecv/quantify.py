@@ -136,6 +136,7 @@ class TIDERun:
 	_temp_vars = ['best_score', 'best_id', 'used', 'matched_with', '_idx', 'usable']
 
 	_score = []
+	_roi_score = []
 	_iou = []
 	_gt_label_id = []
 	_pre_label_id = []
@@ -167,7 +168,7 @@ class TIDERun:
 		self._save()
 
 	def _save(self):
-		res = {'score': self._score, 'iou': self._iou, 'gt_label_id': self._gt_label_id,
+		res = {'score': self._score, 'roi_score': self._roi_score, 'iou': self._iou, 'gt_label_id': self._gt_label_id,
 			   'pre_label_id': self._pre_label_id, 'image_id': self._image_id, 'anno_id': self._anno_id,
 			   'bbox_type': self._bbox_type}
 		res_df = pd.DataFrame(res)
@@ -232,6 +233,7 @@ class TIDERun:
 						self.false_negatives[truth['class']].append(truth)
 
 						self._score.append(truth['score']-1)
+						self._roi_score.append(0)
 						self._iou.append(0)
 						self._gt_label_id.append(truth['class'])
 						self._pre_label_id.append(0)
@@ -253,6 +255,7 @@ class TIDERun:
 
 			if pred['info']['used']:
 				self._score.append(pred['score'])
+				self._roi_score.append(pred['roi_score'])
 				self._iou.append(pred['iou'])
 				self._gt_label_id.append(pred['class'])
 				self._pre_label_id.append(pred['class'])
@@ -269,6 +272,7 @@ class TIDERun:
 					self._add_error(BackgroundError(pred))
 
 					self._score.append(pred['score'])
+					self._roi_score.append(pred['roi_score'])
 					self._iou.append(pred['iou'])
 					self._gt_label_id.append(0)
 					self._pre_label_id.append(pred['class'])
@@ -284,6 +288,7 @@ class TIDERun:
 					self._add_error(BoxError(pred, ex.gt[idx], ex))
 
 					self._score.append(pred['score'])
+					self._roi_score.append(pred['roi_score'])
 					self._iou.append(pred['iou'])
 					self._gt_label_id.append(pred['class'])
 					self._pre_label_id.append(pred['class'])
@@ -299,6 +304,7 @@ class TIDERun:
 					self._add_error(ClassError(pred, ex.gt[idx], ex))
 
 					self._score.append(pred['score'])
+					self._roi_score.append(pred['roi_score'])
 					self._iou.append(pred['iou'])
 					self._gt_label_id.append(ex.gt[idx]['class'])
 					self._pre_label_id.append(pred['class'])
@@ -315,6 +321,7 @@ class TIDERun:
 					self._add_error(DuplicateError(pred, suppressor))
 
 					self._score.append(pred['score'])
+					self._roi_score.append(pred['roi_score'])
 					self._iou.append(pred['iou'])
 					self._gt_label_id.append(pred['class'])
 					self._pre_label_id.append(pred['class'])
@@ -330,6 +337,7 @@ class TIDERun:
 					self._add_error(BackgroundError(pred))
 
 					self._score.append(pred['score'])
+					self._roi_score.append(pred['roi_score'])
 					self._iou.append(pred['iou'])
 					self._gt_label_id.append(0)
 					self._pre_label_id.append(pred['class'])
@@ -342,6 +350,7 @@ class TIDERun:
 				self._add_error(OtherError(pred))
 
 				self._score.append(pred['score'])
+				self._roi_score.append(pred['roi_score'])
 				self._iou.append(pred['iou'])
 				self._gt_label_id.append(ex.gt[idx]['class'])
 				self._pre_label_id.append(pred['class'])
@@ -363,6 +372,7 @@ class TIDERun:
 						self._add_error(MissedError(truth))
 
 						self._score.append(truth['score'] - 1)
+						self._roi_score.append(0)
 						self._iou.append(0)
 						self._gt_label_id.append(truth['class'])
 						self._pre_label_id.append(0)

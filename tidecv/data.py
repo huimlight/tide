@@ -60,7 +60,7 @@ class Data():
 	def _prepare_mask(self, mask:object):
 		return mask
 
-	def _add(self, image_id:int, anno_id:int, class_id:int, box:object=None, mask:object=None, score:float=1, ignore:bool=False):
+	def _add(self, image_id:int, anno_id:int, class_id:int, box:object=None, mask:object=None, score:float=1, roi_score:float=1, ignore:bool=False):
 		""" Add a data object to this collection. You should use one of the below functions instead. """
 		self._make_default_class(class_id)
 		self._make_default_image(image_id)
@@ -69,6 +69,7 @@ class Data():
 		self.annotations.append({
 			'_id'   : new_id,
 			'score' : score,
+			'roi_score': roi_score,
 			'image' : image_id,
 			'anno_id': anno_id,
 			'class' : class_id,
@@ -83,9 +84,9 @@ class Data():
 		""" Add a ground truth. If box or mask is None, this GT will be ignored for that mode. """
 		self._add(image_id, anno_id, class_id, box, mask)
 
-	def add_detection(self, image_id:int, anno_id:int, class_id:int, score:int, box:object=None, mask:object=None):
+	def add_detection(self, image_id:int, anno_id:int, class_id:int, score:int, roi_score:int, box:object=None, mask:object=None):
 		""" Add a predicted detection. If box or mask is None, this prediction will be ignored for that mode. """
-		self._add(image_id, anno_id, class_id, box, mask, score=score)
+		self._add(image_id, anno_id, class_id, box, mask, score=score, roi_score=roi_score)
 
 	def add_ignore_region(self, image_id:int, anno_id:int, class_id:int=None, box:object=None, mask:object=None):
 		"""
