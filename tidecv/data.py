@@ -60,7 +60,7 @@ class Data():
 	def _prepare_mask(self, mask:object):
 		return mask
 
-	def _add(self, image_id:int, class_id:int, box:object=None, mask:object=None, score:float=1, ignore:bool=False):
+	def _add(self, image_id:int, anno_id:int, class_id:int, box:object=None, mask:object=None, score:float=1, ignore:bool=False):
 		""" Add a data object to this collection. You should use one of the below functions instead. """
 		self._make_default_class(class_id)
 		self._make_default_image(image_id)
@@ -70,6 +70,7 @@ class Data():
 			'_id'   : new_id,
 			'score' : score,
 			'image' : image_id,
+			'anno_id': anno_id,
 			'class' : class_id,
 			'bbox'  : self._prepare_box(box),
 			'mask'  : self._prepare_mask(mask),
@@ -78,15 +79,15 @@ class Data():
 
 		self.images[image_id]['anns'].append(new_id)
 
-	def add_ground_truth(self, image_id:int, class_id:int, box:object=None, mask:object=None):
+	def add_ground_truth(self, image_id:int, anno_id:int, class_id:int, box:object=None, mask:object=None):
 		""" Add a ground truth. If box or mask is None, this GT will be ignored for that mode. """
-		self._add(image_id, class_id, box, mask)
+		self._add(image_id, anno_id, class_id, box, mask)
 
-	def add_detection(self, image_id:int, class_id:int, score:int, box:object=None, mask:object=None):
+	def add_detection(self, image_id:int, anno_id:int, class_id:int, score:int, box:object=None, mask:object=None):
 		""" Add a predicted detection. If box or mask is None, this prediction will be ignored for that mode. """
-		self._add(image_id, class_id, box, mask, score=score)
+		self._add(image_id, anno_id, class_id, box, mask, score=score)
 
-	def add_ignore_region(self, image_id:int, class_id:int=None, box:object=None, mask:object=None):
+	def add_ignore_region(self, image_id:int, anno_id:int, class_id:int=None, box:object=None, mask:object=None):
 		"""
 		Add a region inside of which background detections should be ignored.
 		You can use these to mark a region that has deliberately been left unannotated
@@ -94,7 +95,7 @@ class Data():
 
 		If class_id is -1, this region will match any class. If the box / mask is None, the region will be the entire image.
 		"""
-		self._add(image_id, class_id, box, mask, ignore=True)
+		self._add(image_id, anno_id, class_id, box, mask, ignore=True)
 
 	def add_class(self, id:int, name:str):
 		""" Register a class name to that class ID. """
